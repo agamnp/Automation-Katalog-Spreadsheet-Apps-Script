@@ -1,0 +1,230 @@
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data    ========
+  function FungsiHapusDataDenganSyaratreplacedata() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getActiveSheet();
+    const name = sheet.getName();
+    const skipSheets = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    if (skipSheets.includes(name)) {
+    Logger.log("⏭ Melewati sheet: " + name);
+    return;
+    }
+    Logger.log("🔍 Memproses sheet: " + name);
+    const filterOptions = {
+    kodeRef: {
+    aktif: true,
+    nilaiDiperbolehkan: ['009.03','009.04','009.05','009.09','009.14','009.17','009.18','009.20','009.21','009.22','009.25','009.26']
+    },
+    tahun: { aktif: false, min: 2021, max: 2025 },
+    halaman: { aktif: false, min: 151, max: 2025 },
+    harga: { aktif: false, min: 14800, max: 2025 }
+    };
+
+    const startRow = 10;
+    const headerRow = 9;
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < startRow) {
+      Logger.log("ℹ️ Tidak ada data yang diproses.");
+      return;
+    }
+    const headers = sheet.getRange(headerRow, 1, 1, lastCol).getValues()[0].map(h => String(h).trim().toLowerCase());
+    const data = sheet.getRange(startRow, 1, lastRow - startRow + 1, lastCol).getValues();
+    const getIndex = (colName) => headers.indexOf(colName.toLowerCase());
+    const idxKodeRef = getIndex("kode referensi");
+    const idxTahun = getIndex("tahun terbit digital*");
+    const idxHalaman = getIndex("jumlah halaman*");
+    const idxHarga = getIndex("harga satuan");
+    const dataLolos = data.filter(row => {
+    if (filterOptions.kodeRef.aktif && idxKodeRef !== -1) {
+    const val = String(row[idxKodeRef]).trim();
+    if (!filterOptions.kodeRef.nilaiDiperbolehkan.includes(val)) return false;
+    }
+    if (filterOptions.tahun.aktif && idxTahun !== -1) {
+    const val = Number(row[idxTahun]);
+    if (isNaN(val) || val < filterOptions.tahun.min || val > filterOptions.tahun.max) return false;
+    }
+    if (filterOptions.halaman.aktif && idxHalaman !== -1) {
+    const val = Number(row[idxHalaman]);
+    if (isNaN(val) || val < filterOptions.halaman.min || val > filterOptions.halaman.max) return false;
+    }
+    if (filterOptions.harga.aktif && idxHarga !== -1) {
+    const val = Number(row[idxHarga]);
+    if (isNaN(val) || val < filterOptions.harga.min || val > filterOptions.harga.max) return false;
+    }
+    return true;
+    });
+    // ❌ Jika semua baris gagal
+    if (dataLolos.length === 0) {
+    const allSheets = ss.getSheets();
+    if (allSheets.length > 1) {
+    Logger.log("🗑 Semua data tidak memenuhi syarat. Menghapus sheet: " + name);
+    ss.deleteSheet(sheet);
+    } else {
+    Logger.log("⚠️ Tidak bisa menghapus sheet karena hanya ada satu sheet.");
+    }
+    return;
+    }
+
+    // 🧹 Kosongkan isi data lama (baris 10 ke bawah)
+    sheet.getRange(startRow, 1, lastRow - startRow + 1, lastCol).clearContent();
+    // ✍️ Tulis ulang data yang lolos mulai dari baris 10
+    sheet.getRange(startRow, 1, dataLolos.length, lastCol).setValues(dataLolos);
+    // 🧼 Hapus baris kosong & format di bawah data yang valid
+    const lastDataRow = startRow + dataLolos.length - 1;
+    const totalRowCount = sheet.getMaxRows();
+    if (lastDataRow < totalRowCount) {
+    const rowsToClear = totalRowCount - lastDataRow;
+    const rangeToClear = sheet.getRange(lastDataRow + 1, 1, rowsToClear, lastCol);
+    rangeToClear.clear({ contentsOnly: false }); // hapus isi & format
+    // Khusus untuk memastikan border hilang (kadang clear() tidak cukup)
+    rangeToClear.setBorder(false, false, false, false, false, false);
+    Logger.log(`🧹 Menghapus format & isi dari ${rowsToClear} baris di bawah data.`);
+    }
+    // 🚀 Lanjutkan tampilan
+    FungsiTampilanSheetPenerbit();
+    Logger.log(`✅ Selesai. Dihapus ${data.length - dataLolos.length} baris, tersisa ${dataLolos.length}.`);
+  }
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data    ========
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data semua Sheet    ========
+ function FungsiHapusDataDenganSyaratreplacedataALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai = 0 ; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiHapusDataDenganSyaratreplacedata();
+    });
+  }
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data semua Sheet    ========
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital     ========
+ function FungsiHapusDataDenganSyarat() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+  const name = sheet.getName();
+  const skipSheets = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+  if (skipSheets.includes(name)) {
+    Logger.log("⏭ Melewati sheet: " + name);
+    return;
+  }
+
+  Logger.log("🔍 Memproses sheet: " + name);
+
+  const filterOptions = {
+    kodeRef: {
+      aktif: true,
+      nilaiDiperbolehkan: ['009.03','009.04','009.05','009.09','009.14','009.17','009.18','009.20','009.21','009.22','009.25','009.26']
+    },
+    tahun: { aktif: false, min: 2021, max: 2025 },
+    halaman: { aktif: false, min: 151, max: 2025 },
+    harga: { aktif: false, min: 14800, max: 2025 }
+  };
+
+  const startRow = 10;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < startRow) {
+    Logger.log("ℹ️ Tidak ada data yang diproses.");
+    return;
+  }
+
+  const headers = sheet.getRange(9, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim().toLowerCase());
+  const data = sheet.getRange(startRow, 1, lastRow - startRow + 1, headers.length).getValues();
+
+  const getIndex = (colName) => headers.indexOf(colName.toLowerCase());
+  const idxKodeRef = getIndex("kode referensi");
+  const idxTahun = getIndex("tahun terbit digital*");
+  const idxHalaman = getIndex("jumlah halaman*");
+  const idxHarga = getIndex("harga satuan");
+
+  const rowsToDelete = [];
+
+  // Deteksi baris yang tidak lolos
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    let hapus = false;
+
+    if (filterOptions.kodeRef.aktif && idxKodeRef !== -1) {
+      const val = String(row[idxKodeRef]).trim();
+      if (!filterOptions.kodeRef.nilaiDiperbolehkan.includes(val)) hapus = true;
+    }
+
+    if (filterOptions.tahun.aktif && idxTahun !== -1) {
+      const val = Number(row[idxTahun]);
+      if (isNaN(val) || val < filterOptions.tahun.min || val > filterOptions.tahun.max) hapus = true;
+    }
+
+    if (filterOptions.halaman.aktif && idxHalaman !== -1) {
+      const val = Number(row[idxHalaman]);
+      if (isNaN(val) || val < filterOptions.halaman.min || val > filterOptions.halaman.max) hapus = true;
+    }
+
+    if (filterOptions.harga.aktif && idxHarga !== -1) {
+      const val = Number(row[idxHarga]);
+      if (isNaN(val) || val < filterOptions.harga.min || val > filterOptions.harga.max) hapus = true;
+    }
+
+    if (hapus) rowsToDelete.push(startRow + i);
+  }
+
+  const jumlahBarisLolos = data.length - rowsToDelete.length;
+
+  if (jumlahBarisLolos === 0) {
+    const allSheets = ss.getSheets();
+    if (allSheets.length > 1) {
+      Logger.log("🗑 Semua data tidak memenuhi syarat. Menghapus sheet: " + name);
+      ss.deleteSheet(sheet);
+    } else {
+      Logger.log("⚠️ Tidak bisa menghapus sheet karena hanya ada satu sheet.");
+    }
+    return;
+  }
+
+  // 🔁 Hapus secara bulk dari bawah ke atas
+  rowsToDelete.sort((a, b) => b - a);
+  for (let row of rowsToDelete) {
+    sheet.deleteRow(row);
+  }
+
+  FungsiTampilanSheetPenerbit();
+  Logger.log(`✅ Selesai. Dihapus ${rowsToDelete.length} baris, tersisa ${jumlahBarisLolos}.`);
+ }
+
+  
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital     ========
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital semua Sheet     ========
+  function FungsiHapusDataDenganSyaratALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai = 0 ; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiHapusDataDenganSyarat();
+    });
+  }
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital semua Sheet     ========
+
