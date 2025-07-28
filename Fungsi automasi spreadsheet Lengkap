@@ -1,0 +1,793 @@
+//UPDATEd TANGGAL : 24/07/2025 Jam 12:00
+
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    ========
+  function FungsiTampilanSheetPenerbit() {
+    const sheet = SpreadsheetApp.getActiveSheet();
+    const nama = sheet.getSheetName();
+    const maxRows = sheet.getLastRow();
+    const lastRow = sheet.getLastRow();
+    const startRow = 10;
+
+    //Lewati sheet yang bukan shee penerbit
+    const sheetExcluded = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    if (sheetExcluded.includes(nama)) {Logger.log('Sheet dilewati karena termasuk karna bukan sheet Penerbit: ' + nama);  return; }
+
+    Logger.log('Menjalankan FungsiTampilanSheetPenerbit pada Sheet: ' + nama);
+    
+    // --- Lepas Freeze dan Filter jika ada ---
+    sheet.setFrozenRows(0);
+    sheet.setFrozenColumns(0);
+    if (sheet.getFilter()) {sheet.getFilter().remove();}
+    
+    // --- Atur ukuran kolom ---
+    const ukuranKolom = [
+      44, 119, 369, 129, 127, 134, 124, 125, 109, 109,
+      100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+      100, 100, 100, 100, 150, 80, 115, 266
+    ];
+    ukuranKolom.forEach((width, i) => sheet.setColumnWidth(i + 1, width));
+    sheet.setFrozenColumns(10);
+    sheet.setFrozenRows(9);
+    sheet.getRange('G2').setFormula(`=COUNTA(C10:C${maxRows})`);
+    sheet.getRange('G3').setFormula(`=SUM(Y10:Y${maxRows})`);
+    sheet.getRange('G4').setFormula(`=AVERAGE(Y10:Y${maxRows})`);
+    sheet.getRange('J2').setFormula(`=COUNTA(Z10:Z${maxRows})`);
+    sheet.getRange('J3').setFormula(`=SUM(Z10:Z${maxRows})`);
+    sheet.getRange('J4').setFormula(`=SUM(AA10:AA${maxRows})`);
+    sheet.getRange('J5').setFormula(`=AVERAGEIF(Z10:Z${maxRows}, ">0", AA10:AA${maxRows})`);
+   
+    // --- Format tabel ---
+    const borderStyle = SpreadsheetApp.BorderStyle.SOLID;
+    sheet.getRange('F1:J5').setBorder(false, false, false, false, false, false);
+    sheet.getRange('F1:G4').setBorder(true, true, true, true, true, true, '#000000', borderStyle);
+    sheet.getRange('I1:J5').setBorder(true, true, true, true, true, true, '#000000', borderStyle);
+    sheet.getRange(`A9:AB${maxRows}`).setBorder(true, true, true, true, true, true, '#000000', borderStyle);
+    const dataStart = sheet.getRange('B9');
+    const dataRegion = dataStart.getDataRegion(SpreadsheetApp.Dimension.ROWS);
+    dataRegion.setBorder(true, true, true, true, true, true, '#000000', SpreadsheetApp.BorderStyle.SOLID);
+    
+    //Format font dan aligment
+    sheet.getRange('F1:J5').setHorizontalAlignment('center').setVerticalAlignment('middle');
+    sheet.getRange(`A10:B${maxRows}`).setHorizontalAlignment('center').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+    sheet.getRange(`C10:E${maxRows}`).setHorizontalAlignment('left').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+    sheet.getRange(`F10:G${maxRows}`).setHorizontalAlignment('center').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+    sheet.getRange(`H10:I${maxRows}`).setHorizontalAlignment('left').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+    sheet.getRange(`J10:J${maxRows}`).setHorizontalAlignment('center').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+    sheet.getRange(`K10:X${maxRows}`).setHorizontalAlignment('left').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+    sheet.getRange(`Y10:AB${maxRows}`).setHorizontalAlignment('center').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+    sheet.getRangeList(['J4', 'G3:G4']).setNumberFormat('[$Rp-421] #,##0');
+    
+    //Modul autofill     
+    function modulclearAndAutoFillColumn(sheet, colLetter, startRow, formulaOrValue) {
+    const col = sheet.getRange(colLetter + '1').getColumn();
+    const range = sheet.getRange(startRow, col, lastRow - startRow + 1);
+    // Hapus isi sel
+    range.clear({ contentsOnly: true, skipFilteredRows: true });
+    // Tulis formula atau value di sel awal
+    const firstCell = sheet.getRange(startRow, col);
+    if (formulaOrValue.startsWith('=')) {
+    firstCell.setFormula(formulaOrValue);
+    } else {
+    firstCell.setValue(formulaOrValue);
+    }
+    // Autofill ke bawah kalau barisnya lebih dari 1
+    if (lastRow > startRow) {
+    const fillRange = sheet.getRange(startRow, col, lastRow - startRow + 1);
+    firstCell.autoFill(fillRange, SpreadsheetApp.AutoFillSeries.ALTERNATE_SERIES);
+    };
+    }
+    // --- Auto-fill beberapa kolom ---
+    modulclearAndAutoFillColumn(sheet, 'A', startRow, '1');
+    modulclearAndAutoFillColumn(sheet, 'B', startRow, '=HYPERLINK("https://mocostore.moco.co.id/catalog/"&AB10;"Klik Disini")');
+    modulclearAndAutoFillColumn(sheet, 'AA', startRow, '=Y10*Z10');
+    
+    // --- Ganti named range ---
+    const cleanNamerange = sheet.getName().replace(/[0-9().\-]/g, '').replace(/\s/g, '');
+    sheet.getParent().setNamedRange(cleanNamerange, sheet.getRange(`J10:J${maxRows}`));
+    
+    // --- Ganti nama sheet ---
+    const rawName = sheet.getName();
+    const cleanNamesheet = rawName.replace(/[0-9.]/g, '');
+    const sheetIndex = sheet.getIndex() - 3;
+    sheet.setName(`${sheetIndex}.${cleanNamesheet}`);
+    Logger.log('Selesai Menjalankan FungsiTampilanSheetPenerbit pada Sheet: ' + nama);
+
+    // === [8] PASANG ULANG Freeze ===
+    sheet.setFrozenColumns(10);
+    sheet.setFrozenRows(9);
+    // === [9] PASANG FILTER ===
+    const dataRange = sheet.getRange(`A9:AB${maxRows}`);
+    if (!dataRange.getFilter()) {
+      dataRange.createFilter();
+      //Logger.log(`🔍 Filter ditambahkan pada data: A9:AB${maxRows}`);
+    }
+  };
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    ========
+
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    semua Sheet     ========
+  function FungsiTampilanSheetPenerbitALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai =0; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
+
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiTampilanSheetPenerbit();
+    });
+  };
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    semua Sheet     ========
+
+//     ========     Fungsi Mengisi Sheet Hasil Seleksi     ========
+  function FungsiIsiSheetHasilSeleksi() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetUtama = ss.getActiveSheet();
+    const namaSheetAktif = sheetUtama.getName();
+    // Cek apakah sheet aktif adalah "Hasil Seleksi"
+    if (namaSheetAktif !== 'Hasil Seleksi') {
+      Logger.log('Fungsi ini hanya dapat dijalankan di sheet "Hasil Seleksi".');
+      return;
+    }
+    const semuaSheet = ss.getSheets();
+    const namaSheets = semuaSheet.map(sheet => sheet.getName());
+    const colPenerbit = 2; // Kolom B
+    const colJumlahJudul = 3; // Kolom C
+    const colTotalHarga = 5; // Kolom E
+    const coljumjudlsel = 9; // kolom I
+    const coltotcopsel = 10; // Kolom J
+    const coltotharsel = 11; // Kolom K
+
+    // Baris target awal : 20 ada 9 penerbit dan Baris target awal : 36 dan ada 84 penerbit 
+    //PERLU DIRUBAH ==============================================================================
+    const bnykpen = 9;//Array(9) adalah banyak baris dari data yang akan diisi
+    const bpa = 20;// map(i => i + 20) adalah baris awal nya adalah baris 20
+    const bnykpen2 = 84;//Array(84) adalah banyak baris dari data yang akan diisi
+    const bpa2 = 36;// map(i => i + 35) adalah baris awal nya adalah baris 36
+    //PERLU DIRUBAH ==============================================================================
+    
+    const barisTarget = [...Array(bnykpen).keys()]
+      .map(i => i + bpa) //jumlah baris bnykpen dan di mulai dari baris bpa
+      .concat([...Array(bnykpen2).keys()].map(i => i + bpa2));//jumlah baris bnykpen2 dan di mulai dari baris bpa2
+    barisTarget.forEach(row => {
+      const penerbit = sheetUtama.getRange(row, colPenerbit).getValue();
+      if (!penerbit) return;
+      // Cari sheet yang cocok berdasarkan nama penerbit
+      const sheetCocok = namaSheets.find(namaSheet =>
+        namaSheet.toLowerCase().includes(penerbit.toString().toLowerCase())
+      );
+      if (sheetCocok) {
+        Logger.log(`Memproses penerbit: ${penerbit} → sheet: ${sheetCocok}`);
+        sheetUtama.getRange(row, colJumlahJudul).setFormula(`='${sheetCocok}'!G2`); // Isi kolom C (Jumlah Judul) dengan G2 dari sheet penerbit
+        sheetUtama.getRange(row, colTotalHarga).setFormula(`='${sheetCocok}'!G3`);// Isi kolom E (Total Harga) dengan G3 dari sheet penerbit
+        sheetUtama.getRange(row, coljumjudlsel).setFormula(`='${sheetCocok}'!J2`);//Isi kolom I (Jumlah Judul Seleksi) dengan J2 dari sheet penerbit
+        sheetUtama.getRange(row, coltotcopsel).setFormula(`='${sheetCocok}'!J3`);//Isi kolom J (total Copy Seleksi) dengan J3 dari sheet penerbit
+        sheetUtama.getRange(row, coltotharsel).setFormula(`='${sheetCocok}'!J4`);//Isi kolom J (total Harga Seleksi) dengan J4 dari sheet penerbit    
+      } else {
+        sheetUtama.getRange(row, colJumlahJudul).setValue('Sheet tidak ditemukan');
+        sheetUtama.getRange(row, colTotalHarga).setValue('Sheet tidak ditemukan');
+        sheetUtama.getRange(row, coljumjudlsel).setValue('Sheet tidak ditemukan');
+        sheetUtama.getRange(row, coltotcopsel).setValue('Sheet tidak ditemukan');
+        sheetUtama.getRange(row, coltotharsel).setValue('Sheet tidak ditemukan');
+      }
+    });
+  }
+//     ========     Fungsi Mengisi Sheet Hasil Seleksi     ========
+
+//     ========     Fungsi Mengisi Rumus Tabel referensi     ========
+  //Fungsi ini mengisi rumus pada sheet Referensi
+  function FungsiIsiSheetReferensi() {
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheetUtama = ss.getActiveSheet();
+      const namaSheetAktif = sheetUtama.getName();
+      // Cek apakah sheet aktif adalah "Referensi"
+      if (namaSheetAktif !== 'Referensi') {
+        Logger.log('Fungsi ini hanya dapat dijalankan di sheet "Referensi".');
+        return;
+      }
+      Logger.log('Menjalankan FungsiIsiSheetReferensi ');
+      modulIsidaftarPenerbit(); //PERLU DIRUBAH
+      modulisidatareferensi();
+      moduljumlahreferensi();
+      Logger.log('Selesai Menjalankan FungsiIsiSheetReferensi ".');
+  }
+
+  //modul untuk mengisi list penerbit
+  function modulIsidaftarPenerbit() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetUtama = ss.getSheetByName("Hasil Seleksi");
+    const sheetReferensi = ss.getSheetByName("REFERENSI");
+    const colNomor = 1;     // Kolom A = nomor urut
+    const colPenerbit = 2;  // Kolom B = nama penerbit
+    const startColReferensi = 5; // Kolom E = kolom ke-5
+    const rowReferensi = 4;      // Baris 4 di sheet REFERENSI
+    const semuaSheet = ss.getSheets();
+
+    
+    // Baris target awal : 20 ada 9 penerbit dan Baris target awal : 36 dan ada 84 penerbit 
+    //PERLU DIRUBAH ==============================================================================
+    const bnykpen = 4;//Array(9) adalah jumlah baris dari data yang akan diisi
+    const bpa = 20;// map(i => i + 20) adalah baris awal nya adalah baris 20
+    const bnykpen2 = 69;//Array(84) adalah jumlah baris dari data yang akan diisi
+    const bpa2 = 31;// map(i => i + 36) adalah baris awal nya adalah baris 36
+    //PERLU DIRUBAH ==============================================================================
+
+    const barisTarget = [...Array(bnykpen).keys()].map(i => i + bpa).concat([...Array(bnykpen2).keys()].map(i => i + bpa2));
+    let col = startColReferensi;
+    barisTarget.forEach(row => {
+      const nomorUrut = sheetUtama.getRange(row, colNomor).getValue();
+      const penerbit = sheetUtama.getRange(row, colPenerbit).getValue();
+      if (!penerbit || !nomorUrut) return;
+      // Cari sheet yang mengandung nama penerbit
+      const sheetCocok = semuaSheet.find(sheet =>
+        sheet.getName().toLowerCase().includes(penerbit.toString().toLowerCase())
+      );
+      if (sheetCocok) {
+        const gid = sheetCocok.getSheetId();
+        const label = `${nomorUrut}`;
+        const formula = `=HYPERLINK("#gid=${gid}"; "${label}")`;
+        sheetReferensi.getRange(rowReferensi, col).setFormula(formula);
+        col++;
+      }
+    });
+  }
+
+  //Modul untuk mengisi data referensi
+  function modulisidatareferensi() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetRef = ss.getSheetByName("REFERENSI");
+    const barisTarget = [6, 11, 12, 13,
+      19, 20, 21, 22, 23, 24,
+      29, 30, 31, 32, 33, 34, 35, 36,
+      42, 43, 44, 45, 46, 47, 48,
+      53, 54,
+      58, 59,
+      64, 65, 66,
+      71, 72, 73, 74, 75, 76, 77,
+      81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109,
+      113, 114, 115, 116, 117, 118];
+    const bariskosong = 6; //baris yang masih kosong referensinya
+    const barisHyperlink = 4;
+    const kolomMulai = 5;  // Kolom E
+    const kolomAkhir = 115; // Kolom CV
+    const semuaSheet = ss.getSheets();
+    for (let col = kolomMulai; col <= kolomAkhir; col++) {
+      const formulaHyperlink = sheetRef.getRange(barisHyperlink, col).getFormula();
+      const gidMatch = formulaHyperlink.match(/gid=(\d+)/);
+      if (!gidMatch) continue;
+      const gid = parseInt(gidMatch[1], 10);
+      const sheetTarget = semuaSheet.find(s => s.getSheetId() === gid);
+      if (!sheetTarget) continue;
+      const namaSheet = sheetTarget.getName();
+      const namaRange = namaSheet.replace(/[^A-Za-z]/g, ""); // hanya huruf
+      barisTarget.forEach(row => {
+        let formulaCountif;
+        if (row === 6) {
+          // Baris 6: hitung sel kosong
+          formulaCountif = `=COUNTIF(${namaRange};"") `;
+        } else {
+          // Baris lainnya: hitung berdasarkan nilai dari kolom A di REFERENSI
+          formulaCountif = `=COUNTIF(${namaRange}; $A${row})`;
+        }
+        sheetRef.getRange(row, col).setFormula(formulaCountif);
+      });
+    }
+  }
+
+  //Modul Untuk mengisi jumlah baris kosong dan jumlah referensi
+  function moduljumlahreferensi() {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var startColumnIndex = 5; // Column E
+    var lastColumn = sheet.getLastColumn();
+    var row4Range = sheet.getRange(4, startColumnIndex, 1, lastColumn - startColumnIndex + 1);
+    var row4Values = row4Range.getValues()[0];
+
+    // Helper function to convert column number to letter (supports columns beyond Z)
+    function columnToLetter(column) {
+      var letter = '';
+      while (column > 0) {
+        var mod = (column - 1) % 26;
+        letter = String.fromCharCode(65 + mod) + letter;
+        column = Math.floor((column - mod) / 26);
+      } return letter;
+    }
+    // Collect columns from E onward where row 4 cell is non-empty
+    var columns = [];
+    for (var i = 0; i < row4Values.length; i++) {
+      if (row4Values[i] !== '' && row4Values[i] !== null) {
+        var colIndex = startColumnIndex + i; // Get actual column index
+        columns.push(colIndex); // Store the index
+      }
+    }
+    var formulas = {
+      5: '=SUM({col}14;{col}25;{col}37;{col}49;{col}55;{col}60;{col}67;{col}78;{col}110;{col}119)',
+      14: '=SUM({col}11:{col}13)',
+      25: '=SUM({col}19:{col}24)',
+      37: '=SUM({col}29:{col}36)',
+      49: '=SUM({col}41:{col}48)',
+      55: '=SUM({col}53:{col}54)',
+      60: '=SUM({col}58:{col}59)',
+      67: '=SUM({col}64:{col}66)',
+      78: '=SUM({col}70:{col}77)',
+      110: '=SUM({col}81:{col}109)',
+      119: '=SUM({col}113:{col}118)'
+    };
+    columns.forEach(function (colIndex) {
+      for (var rowStr in formulas) {
+        var row = parseInt(rowStr, 10);
+        var colLetter = columnToLetter(colIndex);
+        var formula = formulas[row].replace(/{col}/g, colLetter);
+        sheet.getRange(row, colIndex).setFormula(formula);
+      }
+    });
+  }
+//     ========     Fungsi Mengisi Rumus Tabel referensi     ========
+
+//    ========     Fungsi Hapus Sheet PPN atau Non PPN     ========
+  function FungsiHapusSheetPPNatauNonPPN() {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sheetSeleksi = ss.getSheetByName("Hasil Seleksi");
+    var data = sheetSeleksi.getDataRange().getValues();
+    var penerbitPPNMap = {}; // key: nama penerbit, value: jenis PPN
+    // Ambil nama-nama penerbit yang PPN saja
+    for (var i = 17; i < data.length; i++) {
+      var namaPenerbit = data[i][1]; // Kolom B
+      var jenisPPN = data[i][3];     // Kolom D
+
+      
+      //PERLU DIRUBAH ==============================================================================
+      if (namaPenerbit && jenisPPN && jenisPPN.toLowerCase().trim() === "ppn") //Ganti dengan jenis penerbit yang akan di hapus : ppn || non ppn
+      //PERLU DIRUBAH ==============================================================================
+      {
+        penerbitPPNMap[namaPenerbit.trim()] = jenisPPN.trim();
+      }
+    }
+
+    // Loop semua sheet dan hapus kalau cocok
+    var allSheets = ss.getSheets();
+    allSheets.forEach(function (sheet) {
+      var rawName = sheet.getName();
+      var cleanName = rawName.replace(/^\d+\.\s*/, "").trim();
+      if (penerbitPPNMap.hasOwnProperty(cleanName)) {
+        Logger.log("Menghapus sheet: " + cleanName + " | Jenis: " + penerbitPPNMap[cleanName]);
+        ss.deleteSheet(sheet);
+      }
+    });
+  }
+//    ========     Fungsi Hapus Sheet PPN atau Non PPN     ========
+
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN     ========
+ function FungsiHapusSudahdibeliISBNdanEISBN() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetData = ss.getActiveSheet();
+  const sheetISBN = ss.getSheetByName("DaftarISBN");
+  const nama = sheetData.getName();
+
+  Logger.log('🔍 Menjalankan FungsiHapusSudahdibeliISBNdanEISBN pada Sheet: ' + nama);
+
+  if (!sheetData || !sheetISBN) {
+    throw new Error("Sheet aktif atau 'DaftarISBN' tidak ditemukan.");
+  }
+
+  const startRow = 9;
+  const lastRow = sheetData.getLastRow();
+  const numRows = lastRow - startRow + 1;
+
+  // 🛡️ Cegah error range kosong
+  if (numRows < 1) {
+    Logger.log("⚠️ Tidak ada data untuk diproses.");
+    return;
+  }
+
+  const dataRange = sheetData.getRange(startRow, 1, numRows, sheetData.getLastColumn());
+  const data = dataRange.getValues();
+
+  // Ambil ISBN referensi dan bersihkan
+  const rawISBNData = sheetISBN.getRange("A:B").getValues();
+  const isbnSet = new Set();
+  rawISBNData.forEach(([isbnCetak, isbnElektronik]) => {
+    const clean1 = String(isbnCetak).replace(/\D/g, "");
+    const clean2 = String(isbnElektronik).replace(/\D/g, "");
+    if (clean1) isbnSet.add(clean1);
+    if (clean2) isbnSet.add(clean2);
+  });
+
+  // Cek indeks kolom
+  const headers = data[0].map(h => String(h).toLowerCase().trim());
+  const isbnCetakIndex = headers.findIndex(h => h === "isbn cetak");
+  const isbnElektronikIndex = headers.findIndex(h => h === "isbn elektronik*");
+
+  if (isbnCetakIndex === -1 && isbnElektronikIndex === -1) {
+    throw new Error("Kolom 'ISBN Cetak' dan 'ISBN Elektronik*' tidak ditemukan di baris ke-9.");
+  }
+
+  // Hapus baris dari bawah ke atas
+  for (let i = data.length - 1; i >= 1; i--) {
+    const valCetak = isbnCetakIndex !== -1 ? String(data[i][isbnCetakIndex]).replace(/\D/g, "") : "";
+    const valElektronik = isbnElektronikIndex !== -1 ? String(data[i][isbnElektronikIndex]).replace(/\D/g, "") : "";
+    if (isbnSet.has(valCetak) || isbnSet.has(valElektronik)) {
+      sheetData.deleteRow(startRow + i);
+    }
+  }
+
+  const remainingRows = sheetData.getLastRow();
+
+  // 🧹 Hapus sheet jika terlalu sedikit data dan satu-satunya sheet
+  if (remainingRows < 10 && ss.getSheets().length === 1) {
+    Logger.log('🗑 Menghapus satu-satunya sheet: ' + nama);
+    ss.deleteSheet(sheetData);
+    return;
+  }
+
+  // 🧹 Hapus sheet jika kosong, tapi masih ada sheet lain
+  if (remainingRows < 10) {
+    Logger.log('🗑 Menghapus sheet kosong: ' + nama);
+    ss.deleteSheet(sheetData);
+    return;
+  }
+
+  // ✅ Jalankan hanya jika sheet masih ada dan tidak kosong
+  Logger.log('✅ Selesai Menjalankan FungsiHapusSudahdibeliISBNdanEISBN pada sheet: ' + nama);
+  FungsiTampilanSheetPenerbit();
+ }
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN     ========
+
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN Semua Sheet     ========
+ function FungsiHapusSudahdibeliISBNdanEISBNALLSHEET() {
+  const spreadsheet = SpreadsheetApp.getActive();
+  const semuaSheet = spreadsheet.getSheets();
+
+  //PERLU DIRUBAH ==============================================================================
+  const sheetmulai = 0; // Masukan Nomor Sheet awal
+  //PERLU DIRUBAH ==============================================================================
+
+  const mulai = sheetmulai + 2;
+  const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+
+  if (mulai < 0 || mulai >= semuaSheet.length) {
+    Logger.log("Nomor sheet tidak valid.");
+    return;
+  }
+  semuaSheet.slice(mulai).forEach(sheet => {
+    const namaSheet = sheet.getName();
+    if (sheetDikecualikan.includes(namaSheet)) return;
+    spreadsheet.setActiveSheet(sheet);
+    FungsiHapusSudahdibeliISBNdanEISBN();
+  });
+ };
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN Semua Sheet     ========
+
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID     ========
+ function FungsiHapusSudahdibeliUUID() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetData = ss.getActiveSheet();
+  const sheetUUID = ss.getSheetByName("DaftarUUID");
+  const nama = sheetData.getSheetName();
+
+  Logger.log('Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ' + nama);
+
+  if (!sheetData || !sheetUUID) {
+    throw new Error("Sheet aktif atau 'DaftarUUID' tidak ditemukan.");
+  }
+
+  const startRow = 9;
+  const lastRow = sheetData.getLastRow();
+  const numRows = lastRow - startRow + 1;
+
+  // 🛡️ Cek agar tidak error saat ambil data kosong
+  if (numRows < 1) {
+    Logger.log("⚠️ Tidak ada data untuk diproses.");
+    return;
+  }
+
+  // Ambil header dari baris ke-9
+  const headers = sheetData.getRange(9, 1, 1, sheetData.getLastColumn())
+    .getValues()[0]
+    .map(h => String(h).toLowerCase().trim());
+  const uuidIndex = headers.findIndex(h => h === "uuid");
+  if (uuidIndex === -1) {
+    throw new Error("Kolom 'UUID' tidak ditemukan di baris ke-9.");
+  }
+
+  // Ambil data baris ke bawah
+  const data = sheetData.getRange(startRow, 1, numRows, sheetData.getLastColumn()).getValues();
+
+  // Ambil UUID referensi dari sheet 'DaftarUUID'
+  const uuidRef = sheetUUID.getRange("A:A").getValues()
+    .flat()
+    .filter(val => val);
+  const uuidSet = new Set(uuidRef.map(val => String(val).trim()));
+
+  // Hapus baris dari bawah ke atas
+  let deletedCount = 0;
+  for (let i = data.length - 1; i >= 1; i--) {
+    const uuid = String(data[i][uuidIndex]).trim();
+    if (uuidSet.has(uuid)) {
+      sheetData.deleteRow(startRow + i);
+      deletedCount++;
+    }
+  }
+
+  const remainingRows = sheetData.getLastRow();
+
+  // 🧹 Hapus sheet jika terlalu sedikit data dan satu-satunya sheet
+  if (remainingRows < 10 && ss.getSheets().length === 1) {
+    Logger.log('🗑 Menghapus sheet karena terlalu sedikit data.');
+    ss.deleteSheet(sheetData);
+    return;
+  }
+
+  // 🧹 Hapus sheet jika kosong, tapi masih ada sheet lain
+  if (remainingRows < 10) {
+    Logger.log('🗑 Menghapus sheet karena terlalu sedikit data: ' + nama);
+    ss.deleteSheet(sheetData);
+    return;
+  }
+
+  Logger.log(`✅ Selesai Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ${nama}. Total baris dihapus: ${deletedCount}`);
+  FungsiTampilanSheetPenerbit();
+ }
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID     ========
+
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID semua Sheet     ========
+  function FungsiHapusSudahdibeliUUIDALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai = 0; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiHapusSudahdibeliUUID();
+    });
+  }
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID semua Sheet     ========
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data    ========
+  function FungsiHapusDataDenganSyaratreplacedata() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getActiveSheet();
+    const name = sheet.getName();
+    const skipSheets = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    if (skipSheets.includes(name)) {
+    Logger.log("⏭ Melewati sheet: " + name);
+    return;
+    }
+    Logger.log("🔍 Memproses sheet: " + name);
+    const filterOptions = {
+    kodeRef: {
+    aktif: true,
+    nilaiDiperbolehkan: ['009.03','009.04','009.05','009.09','009.14','009.17','009.18','009.20','009.21','009.22','009.25','009.26']
+    },
+    tahun: { aktif: false, min: 2021, max: 2025 },
+    halaman: { aktif: false, min: 151, max: 2025 },
+    harga: { aktif: false, min: 14800, max: 2025 }
+    };
+
+    const startRow = 10;
+    const headerRow = 9;
+    const lastRow = sheet.getLastRow();
+    const lastCol = sheet.getLastColumn();
+    if (lastRow < startRow) {
+      Logger.log("ℹ️ Tidak ada data yang diproses.");
+      return;
+    }
+    const headers = sheet.getRange(headerRow, 1, 1, lastCol).getValues()[0].map(h => String(h).trim().toLowerCase());
+    const data = sheet.getRange(startRow, 1, lastRow - startRow + 1, lastCol).getValues();
+    const getIndex = (colName) => headers.indexOf(colName.toLowerCase());
+    const idxKodeRef = getIndex("kode referensi");
+    const idxTahun = getIndex("tahun terbit digital*");
+    const idxHalaman = getIndex("jumlah halaman*");
+    const idxHarga = getIndex("harga satuan");
+    const dataLolos = data.filter(row => {
+    if (filterOptions.kodeRef.aktif && idxKodeRef !== -1) {
+    const val = String(row[idxKodeRef]).trim();
+    if (!filterOptions.kodeRef.nilaiDiperbolehkan.includes(val)) return false;
+    }
+    if (filterOptions.tahun.aktif && idxTahun !== -1) {
+    const val = Number(row[idxTahun]);
+    if (isNaN(val) || val < filterOptions.tahun.min || val > filterOptions.tahun.max) return false;
+    }
+    if (filterOptions.halaman.aktif && idxHalaman !== -1) {
+    const val = Number(row[idxHalaman]);
+    if (isNaN(val) || val < filterOptions.halaman.min || val > filterOptions.halaman.max) return false;
+    }
+    if (filterOptions.harga.aktif && idxHarga !== -1) {
+    const val = Number(row[idxHarga]);
+    if (isNaN(val) || val < filterOptions.harga.min || val > filterOptions.harga.max) return false;
+    }
+    return true;
+    });
+    // ❌ Jika semua baris gagal
+    if (dataLolos.length === 0) {
+    const allSheets = ss.getSheets();
+    if (allSheets.length > 1) {
+    Logger.log("🗑 Semua data tidak memenuhi syarat. Menghapus sheet: " + name);
+    ss.deleteSheet(sheet);
+    } else {
+    Logger.log("⚠️ Tidak bisa menghapus sheet karena hanya ada satu sheet.");
+    }
+    return;
+    }
+
+    // 🧹 Kosongkan isi data lama (baris 10 ke bawah)
+    sheet.getRange(startRow, 1, lastRow - startRow + 1, lastCol).clearContent();
+    // ✍️ Tulis ulang data yang lolos mulai dari baris 10
+    sheet.getRange(startRow, 1, dataLolos.length, lastCol).setValues(dataLolos);
+    // 🧼 Hapus baris kosong & format di bawah data yang valid
+    const lastDataRow = startRow + dataLolos.length - 1;
+    const totalRowCount = sheet.getMaxRows();
+    if (lastDataRow < totalRowCount) {
+    const rowsToClear = totalRowCount - lastDataRow;
+    const rangeToClear = sheet.getRange(lastDataRow + 1, 1, rowsToClear, lastCol);
+    rangeToClear.clear({ contentsOnly: false }); // hapus isi & format
+    // Khusus untuk memastikan border hilang (kadang clear() tidak cukup)
+    rangeToClear.setBorder(false, false, false, false, false, false);
+    Logger.log(`🧹 Menghapus format & isi dari ${rowsToClear} baris di bawah data.`);
+    }
+    // 🚀 Lanjutkan tampilan
+    FungsiTampilanSheetPenerbit();
+    Logger.log(`✅ Selesai. Dihapus ${data.length - dataLolos.length} baris, tersisa ${dataLolos.length}.`);
+  }
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data    ========
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data semua Sheet    ========
+ function FungsiHapusDataDenganSyaratreplacedataALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai = 0 ; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiHapusDataDenganSyaratreplacedata();
+    });
+  }
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital replace data semua Sheet    ========
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital     ========
+ function FungsiHapusDataDenganSyarat() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+  const name = sheet.getName();
+
+  const skipSheets = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+  if (skipSheets.includes(name)) {
+    Logger.log("⏭ Melewati sheet: " + name);
+    return;
+  }
+
+  Logger.log("🔍 Memproses sheet: " + name);
+
+  const filterOptions = {
+    kodeRef: {
+      aktif: true,
+      nilaiDiperbolehkan: ['009.03','009.04','009.05','009.09','009.14','009.17','009.18','009.20','009.21','009.22','009.25','009.26']
+    },
+    tahun: { aktif: false, min: 2021, max: 2025 },
+    halaman: { aktif: false, min: 151, max: 2025 },
+    harga: { aktif: false, min: 14800, max: 2025 }
+  };
+
+  const startRow = 10;
+  const lastRow = sheet.getLastRow();
+  if (lastRow < startRow) {
+    Logger.log("ℹ️ Tidak ada data yang diproses.");
+    return;
+  }
+
+  const headers = sheet.getRange(9, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim().toLowerCase());
+  const data = sheet.getRange(startRow, 1, lastRow - startRow + 1, headers.length).getValues();
+
+  const getIndex = (colName) => headers.indexOf(colName.toLowerCase());
+  const idxKodeRef = getIndex("kode referensi");
+  const idxTahun = getIndex("tahun terbit digital*");
+  const idxHalaman = getIndex("jumlah halaman*");
+  const idxHarga = getIndex("harga satuan");
+
+  const rowsToDelete = [];
+
+  // Deteksi baris yang tidak lolos
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    let hapus = false;
+
+    if (filterOptions.kodeRef.aktif && idxKodeRef !== -1) {
+      const val = String(row[idxKodeRef]).trim();
+      if (!filterOptions.kodeRef.nilaiDiperbolehkan.includes(val)) hapus = true;
+    }
+
+    if (filterOptions.tahun.aktif && idxTahun !== -1) {
+      const val = Number(row[idxTahun]);
+      if (isNaN(val) || val < filterOptions.tahun.min || val > filterOptions.tahun.max) hapus = true;
+    }
+
+    if (filterOptions.halaman.aktif && idxHalaman !== -1) {
+      const val = Number(row[idxHalaman]);
+      if (isNaN(val) || val < filterOptions.halaman.min || val > filterOptions.halaman.max) hapus = true;
+    }
+
+    if (filterOptions.harga.aktif && idxHarga !== -1) {
+      const val = Number(row[idxHarga]);
+      if (isNaN(val) || val < filterOptions.harga.min || val > filterOptions.harga.max) hapus = true;
+    }
+
+    if (hapus) rowsToDelete.push(startRow + i);
+  }
+
+  const jumlahBarisLolos = data.length - rowsToDelete.length;
+
+  if (jumlahBarisLolos === 0) {
+    const allSheets = ss.getSheets();
+    if (allSheets.length > 1) {
+      Logger.log("🗑 Semua data tidak memenuhi syarat. Menghapus sheet: " + name);
+      ss.deleteSheet(sheet);
+    } else {
+      Logger.log("⚠️ Tidak bisa menghapus sheet karena hanya ada satu sheet.");
+    }
+    return;
+  }
+
+  // 🔁 Hapus secara bulk dari bawah ke atas
+  rowsToDelete.sort((a, b) => b - a);
+  for (let row of rowsToDelete) {
+    sheet.deleteRow(row);
+  }
+
+  FungsiTampilanSheetPenerbit();
+  Logger.log(`✅ Selesai. Dihapus ${rowsToDelete.length} baris, tersisa ${jumlahBarisLolos}.`);
+ }
+
+  
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital     ========
+
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital semua Sheet     ========
+  function FungsiHapusDataDenganSyaratALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai = 0 ; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiHapusDataDenganSyarat();
+    });
+  }
+//     ========     Fungsi Hapus Data Menggunakan Filter Kategori , Jumlah Halaman , Harga ,Tahun Terbit Digital semua Sheet     ========

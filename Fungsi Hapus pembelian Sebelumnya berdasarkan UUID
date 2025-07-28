@@ -1,0 +1,94 @@
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID     ========
+ function FungsiHapusSudahdibeliUUID() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetData = ss.getActiveSheet();
+  const sheetUUID = ss.getSheetByName("DaftarUUID");
+  const nama = sheetData.getSheetName();
+
+  Logger.log('Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ' + nama);
+
+  if (!sheetData || !sheetUUID) {
+    throw new Error("Sheet aktif atau 'DaftarUUID' tidak ditemukan.");
+  }
+
+  const startRow = 9;
+  const lastRow = sheetData.getLastRow();
+  const numRows = lastRow - startRow + 1;
+
+  // 🛡️ Cek agar tidak error saat ambil data kosong
+  if (numRows < 1) {
+    Logger.log("⚠️ Tidak ada data untuk diproses.");
+    return;
+  }
+
+  // Ambil header dari baris ke-9
+  const headers = sheetData.getRange(9, 1, 1, sheetData.getLastColumn())
+    .getValues()[0]
+    .map(h => String(h).toLowerCase().trim());
+  const uuidIndex = headers.findIndex(h => h === "uuid");
+  if (uuidIndex === -1) {
+    throw new Error("Kolom 'UUID' tidak ditemukan di baris ke-9.");
+  }
+
+  // Ambil data baris ke bawah
+  const data = sheetData.getRange(startRow, 1, numRows, sheetData.getLastColumn()).getValues();
+
+  // Ambil UUID referensi dari sheet 'DaftarUUID'
+  const uuidRef = sheetUUID.getRange("A:A").getValues()
+    .flat()
+    .filter(val => val);
+  const uuidSet = new Set(uuidRef.map(val => String(val).trim()));
+
+  // Hapus baris dari bawah ke atas
+  let deletedCount = 0;
+  for (let i = data.length - 1; i >= 1; i--) {
+    const uuid = String(data[i][uuidIndex]).trim();
+    if (uuidSet.has(uuid)) {
+      sheetData.deleteRow(startRow + i);
+      deletedCount++;
+    }
+  }
+
+  const remainingRows = sheetData.getLastRow();
+
+  // 🧹 Hapus sheet jika terlalu sedikit data dan satu-satunya sheet
+  if (remainingRows < 10 && ss.getSheets().length === 1) {
+    Logger.log('🗑 Menghapus sheet karena terlalu sedikit data.');
+    ss.deleteSheet(sheetData);
+    return;
+  }
+
+  // 🧹 Hapus sheet jika kosong, tapi masih ada sheet lain
+  if (remainingRows < 10) {
+    Logger.log('🗑 Menghapus sheet karena terlalu sedikit data: ' + nama);
+    ss.deleteSheet(sheetData);
+    return;
+  }
+
+  Logger.log(`✅ Selesai Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ${nama}. Total baris dihapus: ${deletedCount}`);
+  FungsiTampilanSheetPenerbit();
+ }
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID     ========
+
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID semua Sheet     ========
+  function FungsiHapusSudahdibeliUUIDALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai = 0; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiHapusSudahdibeliUUID();
+    });
+  }
+//     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID semua Sheet     ========
