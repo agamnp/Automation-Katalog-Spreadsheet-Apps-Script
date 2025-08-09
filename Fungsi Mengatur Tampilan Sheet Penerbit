@@ -1,0 +1,146 @@
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    ========
+  function FungsiTampilanSheetPenerbit(sheet) {
+    // ✅ Pastikan sheet valid
+    if (!sheet) {
+      try {  sheet = SpreadsheetApp.getActiveSheet(); } catch (e) {
+        Logger.log("❌ Tidak ada sheet aktif. Fungsi dihentikan.");
+        return;  } 
+    }  if (!sheet) return;
+
+    const nama = sheet.getSheetName();
+    const startRow = 10;
+
+    // ✅ Lewati sheet yang bukan Penerbit
+    const sheetExcluded = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    if (sheetExcluded.includes(nama)) {
+      Logger.log('Sheet dilewati: ' + nama);
+      return;
+    }
+
+    Logger.log('▶ Menjalankan FungsiTampilanSheetPenerbit pada: ' + nama);
+
+    // Simpan variabel supaya tidak panggil API berulang
+    const spreadsheet = sheet.getParent();
+    const lastRow = sheet.getLastRow();
+    const totalRows = sheet.getMaxRows();
+
+    // Lepas Freeze & Filter
+    sheet.setFrozenRows(0);
+    sheet.setFrozenColumns(0);
+    const filter = sheet.getFilter();
+    if (filter) filter.remove();
+
+    // Atur ukuran kolom (optimasi: pakai setColumnWidths untuk blok yang sama)
+    const ukuranKolom = [
+      44, 119, 369, 129, 127, 134, 124, 125, 109, 109,
+      100, 100, 100, 100, 100, 100, 100, 100, 100, 100,
+      100, 100, 100, 100, 150, 80, 115, 266
+    ];
+
+    ukuranKolom.forEach((width, i) => {
+      sheet.setColumnWidth(i + 1, width);
+    });
+
+    // Pasang ulang freeze
+    sheet.setFrozenColumns(10)
+    sheet.setFrozenRows(9);
+
+    // ✅ Set formula (loop, tidak pakai RangeList)
+    const formulaCells = [
+      ['G2', `=COUNTA(C10:C${lastRow})`],
+      ['G3', `=SUM(Y10:Y${lastRow})`],
+      ['G4', `=AVERAGE(Y10:Y${lastRow})`],
+      ['J2', `=COUNTA(Z10:Z${lastRow})`],
+      ['J3', `=SUM(Z10:Z${lastRow})`],
+      ['J4', `=SUM(AA10:AA${lastRow})`],
+      ['J5', `=AVERAGEIF(Z10:Z${lastRow}, ">0", AA10:AA${lastRow})`]
+    ];
+    formulaCells.forEach(([cell, formula]) => sheet.getRange(cell).setFormula(formula));
+
+    // Format border (gabung dengan RangeList bila sama)
+    const borderStyle = SpreadsheetApp.BorderStyle.SOLID;
+    sheet.getRange('F1:J5').setBorder(false, false, false, false, false, false);
+    sheet.getRangeList(['F1:G4', 'I1:J5']).setBorder(true, true, true, true, true, true, '#000', borderStyle);
+    sheet.getRange(`A9:AB${lastRow}`).setBorder(true, true, true, true, true, true, '#000', borderStyle);
+
+    // Format font & alignment (gabung jadi satu RangeList)
+    sheet.getRange('F1:J5').setHorizontalAlignment('center').setVerticalAlignment('middle');
+
+    sheet.getRangeList([
+      `A10:B${lastRow}`, `F10:G${lastRow}`, `J10:J${lastRow}`, `Y10:AB${lastRow}`
+    ]).setHorizontalAlignment('center').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+
+    sheet.getRangeList([
+      `C10:E${lastRow}`, `H10:I${lastRow}`, `K10:X${lastRow}`
+    ]).setHorizontalAlignment('left').setVerticalAlignment('middle').setFontStyle('normal').setFontWeight('normal');
+
+    sheet.getRangeList(['J4', 'G3', 'G4']).setNumberFormat('[$Rp-421] #,##0');
+
+    // Modul clear & autofill (fungsi tetap sama)
+    function modulclearAndAutoFillColumn(colLetter, formulaOrValue) {
+      const col = sheet.getRange(colLetter + '1').getColumn();
+      const range = sheet.getRange(startRow, col, lastRow - startRow + 1);
+      range.clear({ contentsOnly: true, skipFilteredRows: true });
+
+      const firstCell = sheet.getRange(startRow, col);
+      if (formulaOrValue.startsWith('=')) {
+        firstCell.setFormula(formulaOrValue);
+      } else {
+        firstCell.setValue(formulaOrValue);
+      }
+      if (lastRow > startRow) {
+        firstCell.autoFill(
+          sheet.getRange(startRow, col, lastRow - startRow + 1),
+          SpreadsheetApp.AutoFillSeries.ALTERNATE_SERIES
+        );
+      }
+    }
+    modulclearAndAutoFillColumn('A', '1');
+    modulclearAndAutoFillColumn('B', '=HYPERLINK("https://mocostore.moco.co.id/catalog/"&AB10;"Klik Disini")');
+    modulclearAndAutoFillColumn('AA', '=Y10*Z10');
+
+    // Hapus baris kosong (pakai variabel totalRows)
+    if (lastRow < totalRows) {
+      sheet.deleteRows(lastRow + 1, totalRows - lastRow);
+      Logger.log(`🗑 Menghapus ${totalRows - lastRow} baris kosong.`);
+    }
+
+    // Ganti named range
+    const cleanNamerange = nama.replace(/[0-9().\-]/g, '').replace(/\s/g, '');
+    spreadsheet.setNamedRange(cleanNamerange, sheet.getRange(`J10:J${lastRow}`));
+
+    // Ganti nama sheet
+    const cleanNamesheet = nama.replace(/[0-9.]/g, '');
+    const sheetIndex = sheet.getIndex() - 3;
+    const newName = `${sheetIndex}.${cleanNamesheet}`;
+    if (spreadsheet.getSheets().every(s => s.getName() !== newName)) {
+      sheet.setName(newName);
+    }
+
+    // Pasang filter
+    const dataRange = sheet.getRange(`A9:AB${lastRow}`);
+    if (!dataRange.getFilter()) dataRange.createFilter();
+
+    Logger.log('✅ Selesai Menjalankan FungsiTampilanSheetPenerbit pada: ' + nama);
+  }
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    ========
+
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    semua Sheet     ========
+  function FungsiTampilanSheetPenerbitALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
+    //PERLU DIRUBAH ==============================================================================
+
+      const sheetMulai = 0; // Nomor sheet awal
+
+    //PERLU DIRUBAH ==============================================================================
+    const mulai = sheetMulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    semuaSheet.slice(mulai).forEach(sheet => {
+      if (!sheetDikecualikan.includes(sheet.getName())) {
+        spreadsheet.setActiveSheet(sheet); // 🔹 pindah ke sheet yang diproses
+        FungsiTampilanSheetPenerbit(sheet);
+      }
+    });
+  }
+//     ========     Fungsi Mengatur Tampilan Sheet Penerbit    semua Sheet     ========
