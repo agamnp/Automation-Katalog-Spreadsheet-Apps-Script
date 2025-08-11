@@ -2,10 +2,11 @@
   function FungsiTampilanSheetPenerbit(sheet) {
     // ✅ Pastikan sheet valid
     if (!sheet) {
-      try {  sheet = SpreadsheetApp.getActiveSheet(); } catch (e) {
+      try { sheet = SpreadsheetApp.getActiveSheet(); } catch (e) {
         Logger.log("❌ Tidak ada sheet aktif. Fungsi dihentikan.");
-        return;  } 
-    }  if (!sheet) return;
+        return;
+      }
+    } if (!sheet) return;
 
     const nama = sheet.getSheetName();
     const startRow = 10;
@@ -131,7 +132,7 @@
     const semuaSheet = spreadsheet.getSheets();
     //PERLU DIRUBAH ==============================================================================
 
-      const sheetMulai = 0; // Nomor sheet awal
+    const sheetMulai = 0; // Nomor sheet awal
 
     //PERLU DIRUBAH ==============================================================================
     const mulai = sheetMulai + 2;

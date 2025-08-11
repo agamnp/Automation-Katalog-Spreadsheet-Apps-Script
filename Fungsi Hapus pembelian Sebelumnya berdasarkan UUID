@@ -1,107 +1,107 @@
 //     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID     ========
-function FungsiHapusSudahdibeliUUID() { 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetData = ss.getActiveSheet();
-  const sheetUUID = ss.getSheetByName("DaftarUUID");
-  const nama = sheetData.getName();
+  function FungsiHapusSudahdibeliUUID() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetData = ss.getActiveSheet();
+    const sheetUUID = ss.getSheetByName("DaftarUUID");
+    const nama = sheetData.getName();
 
-  // ✅ Lewati sheet yang bukan Penerbit
-  const sheetExcluded = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
-  if (sheetExcluded.includes(nama)) {
-    Logger.log('Sheet dilewati: ' + nama);
-    return;
-  }
+    // ✅ Lewati sheet yang bukan Penerbit
+    const sheetExcluded = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    if (sheetExcluded.includes(nama)) {
+      Logger.log('Sheet dilewati: ' + nama);
+      return;
+    }
 
-  Logger.log('🔍 Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ' + nama);
+    Logger.log('🔍 Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ' + nama);
 
-  if (!sheetData || !sheetUUID) {
-    throw new Error("Sheet aktif atau 'DaftarUUID' tidak ditemukan.");
-  }
+    if (!sheetData || !sheetUUID) {
+      throw new Error("Sheet aktif atau 'DaftarUUID' tidak ditemukan.");
+    }
 
-  const headerRow = 9;   // Baris header
-  const startRow = 10;   // Baris pertama data
-  const lastRow = sheetData.getLastRow();
-  const numRows = lastRow - startRow + 1;
+    const headerRow = 9;   // Baris header
+    const startRow = 10;   // Baris pertama data
+    const lastRow = sheetData.getLastRow();
+    const numRows = lastRow - startRow + 1;
 
-  // 🛡️ Tidak ada data
-  if (numRows < 1) {
-    Logger.log("⚠️ Tidak ada data untuk diproses.");
-    return;
-  }
+    // 🛡️ Tidak ada data
+    if (numRows < 1) {
+      Logger.log("⚠️ Tidak ada data untuk diproses.");
+      return;
+    }
 
-  // Ambil header
-  const headers = sheetData.getRange(headerRow, 1, 1, sheetData.getLastColumn())
-    .getValues()[0]
-    .map(h => String(h).toLowerCase().trim());
-  const uuidIndex = headers.findIndex(h => h.includes("uuid"));
-  if (uuidIndex === -1) {
-    throw new Error(`Kolom UUID tidak ditemukan di baris ${headerRow}`);
-  }
+    // Ambil header
+    const headers = sheetData.getRange(headerRow, 1, 1, sheetData.getLastColumn())
+      .getValues()[0]
+      .map(h => String(h).toLowerCase().trim());
+    const uuidIndex = headers.findIndex(h => h.includes("uuid"));
+    if (uuidIndex === -1) {
+      throw new Error(`Kolom UUID tidak ditemukan di baris ${headerRow}`);
+    }
 
-  // Ambil data
-  const data = sheetData.getRange(startRow, 1, numRows, sheetData.getLastColumn()).getValues();
+    // Ambil data
+    const data = sheetData.getRange(startRow, 1, numRows, sheetData.getLastColumn()).getValues();
 
-  // UUID referensi
-  const uuidRef = sheetUUID.getRange("A:A").getValues()
-    .flat()
-    .filter(val => val);
-  const uuidSet = new Set(uuidRef.map(val => String(val).trim()));
+    // UUID referensi
+    const uuidRef = sheetUUID.getRange("A:A").getValues()
+      .flat()
+      .filter(val => val);
+    const uuidSet = new Set(uuidRef.map(val => String(val).trim()));
 
-  const frozenRows = sheetData.getFrozenRows();
-  let deletedCount = 0;
+    const frozenRows = sheetData.getFrozenRows();
+    let deletedCount = 0;
 
-  // Hapus dari bawah ke atas
-  for (let i = data.length - 1; i >= 0; i--) {
-    const rowNumber = startRow + i;
-    const uuid = String(data[i][uuidIndex]).trim();
+    // Hapus dari bawah ke atas
+    for (let i = data.length - 1; i >= 0; i--) {
+      const rowNumber = startRow + i;
+      const uuid = String(data[i][uuidIndex]).trim();
 
-    if (uuidSet.has(uuid)) {
-      const remainingNonFrozen = sheetData.getLastRow() - frozenRows;
-      if (remainingNonFrozen > 1) {
-        sheetData.deleteRow(rowNumber);
-        deletedCount++;
-      } else {
-        sheetData.getRange(rowNumber, 1, 1, sheetData.getLastColumn()).clearContent();
+      if (uuidSet.has(uuid)) {
+        const remainingNonFrozen = sheetData.getLastRow() - frozenRows;
+        if (remainingNonFrozen > 1) {
+          sheetData.deleteRow(rowNumber);
+          deletedCount++;
+        } else {
+          sheetData.getRange(rowNumber, 1, 1, sheetData.getLastColumn()).clearContent();
+        }
       }
     }
-  }
 
-  const remainingRows = sheetData.getLastRow();
+    const remainingRows = sheetData.getLastRow();
 
-  // 🧹 Hapus sheet jika terlalu sedikit data
-  if (remainingRows <= frozenRows + 1) {
-    if (ss.getSheets().length === 1) {
-      Logger.log('🗑 Menghapus sheet terakhir karena terlalu sedikit data.');
-      ss.deleteSheet(sheetData);
-      return;
-    } else {
-      const namaPenerbit = sheetData.getName().replace(/^\d+\.\s*/, "").trim();
-      Logger.log('🗑 Menghapus sheet karena terlalu sedikit data: ' + nama);
-      ss.deleteSheet(sheetData);
-      ModulHapusBarisDariHasilSeleksi(namaPenerbit);
-      return;
+    // 🧹 Hapus sheet jika terlalu sedikit data
+    if (remainingRows <= frozenRows + 1) {
+      if (ss.getSheets().length === 1) {
+        Logger.log('🗑 Menghapus sheet terakhir karena terlalu sedikit data.');
+        ss.deleteSheet(sheetData);
+        return;
+      } else {
+        const namaPenerbit = sheetData.getName().replace(/^\d+\.\s*/, "").trim();
+        Logger.log('🗑 Menghapus sheet karena terlalu sedikit data: ' + nama);
+        ss.deleteSheet(sheetData);
+        ModulHapusBarisDariHasilSeleksi(namaPenerbit);
+        return;
+      }
     }
+
+    Logger.log(`✅ Selesai Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ${nama}. Total baris dihapus: ${deletedCount}`);
+    FungsiTampilanSheetPenerbit();
   }
 
-  Logger.log(`✅ Selesai Menjalankan FungsiHapusSudahdibeliUUID pada Sheet: ${nama}. Total baris dihapus: ${deletedCount}`);
-  FungsiTampilanSheetPenerbit();
-}
+  function ModulHapusBarisDariHasilSeleksi(namaPenerbit) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hasil Seleksi");
+    const data = sheet.getDataRange().getValues();
 
-function ModulHapusBarisDariHasilSeleksi(namaPenerbit) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hasil Seleksi");
-  const data = sheet.getDataRange().getValues();
+    const barisUntukHapus = [];
 
-  const barisUntukHapus = [];
-
-  for (let i = 0; i < data.length; i++) {
-    const nama = String(data[i][1] || "").replace(/^\d+\.\s*/, "").trim();
-    if (nama.toLowerCase() === namaPenerbit.toLowerCase()) {
-      barisUntukHapus.push(i + 1);
+    for (let i = 0; i < data.length; i++) {
+      const nama = String(data[i][1] || "").replace(/^\d+\.\s*/, "").trim();
+      if (nama.toLowerCase() === namaPenerbit.toLowerCase()) {
+        barisUntukHapus.push(i + 1);
+      }
     }
-  }
 
-  barisUntukHapus.reverse().forEach(row => sheet.deleteRow(row));
-}
+    barisUntukHapus.reverse().forEach(row => sheet.deleteRow(row));
+  }
 
 //     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan UUID     ========
 

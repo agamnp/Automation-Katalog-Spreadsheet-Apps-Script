@@ -1,6 +1,6 @@
 //     ========     Fungsi Mengisi Sheet Referensi     ========
   function FungsiIsiSheetReferensi() {
-    
+
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheetAktif = ss.getActiveSheet();
     if (sheetAktif.getName().toUpperCase() !== 'REFERENSI') {
@@ -110,6 +110,21 @@
       }
     }
 
-    Logger.log('Selesai isiReferensiOtomatis.');
-  }
+      // =======================
+    // 3. Isi kolom C otomatis dari E ke kanan
+    // =======================
+    const lastColLetter = colLetter(lastCol);
+    barisTarget.forEach(row => {
+      sheetRef.getRange(row, 3).setFormula(`=SUM(E${row}:${lastColLetter}${row})`);
+    });
+
+    // 4. Isi total di kolom C (C14, C25, dst) sesuai sumFormulas
+    for (let rowStr in sumFormulas) {
+      const rowNum = parseInt(rowStr, 10);
+      const formula = sumFormulas[rowNum].replace(/{col}/g, 'C');
+      sheetRef.getRange(rowNum, 3).setFormula(formula);
+    }
+
+      Logger.log('Selesai isiReferensiOtomatis.');
+ } 
 //     ========     Fungsi Mengisi Sheet Referensi     ========

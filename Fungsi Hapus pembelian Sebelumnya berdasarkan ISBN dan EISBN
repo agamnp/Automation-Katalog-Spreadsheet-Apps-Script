@@ -1,134 +1,133 @@
 //     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN     ========
- function FungsiHapusSudahdibeliISBNdanEISBN() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetData = ss.getActiveSheet();
-  const sheetISBN = ss.getSheetByName("DaftarISBN");
-  const nama = sheetData.getName();
+  function FungsiHapusSudahdibeliISBNdanEISBN() {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetData = ss.getActiveSheet();
+    const sheetISBN = ss.getSheetByName("DaftarISBN");
+    const nama = sheetData.getName();
 
-  // ✅ Lewati sheet yang bukan Penerbit
-  const sheetExcluded = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
-  if (sheetExcluded.includes(nama)) {
-    Logger.log('Sheet dilewati: ' + nama);
-    return;
-  }
+    // ✅ Lewati sheet yang bukan Penerbit
+    const sheetExcluded = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    if (sheetExcluded.includes(nama)) {
+      Logger.log('Sheet dilewati: ' + nama);
+      return;
+    }
 
-  Logger.log('🔍 Menjalankan FungsiHapusSudahdibeliISBNdanEISBN pada Sheet: ' + nama);
+    Logger.log('🔍 Menjalankan FungsiHapusSudahdibeliISBNdanEISBN pada Sheet: ' + nama);
 
-  if (!sheetData || !sheetISBN) {
-    throw new Error("Sheet aktif atau 'DaftarISBN' tidak ditemukan.");
-  }
+    if (!sheetData || !sheetISBN) {
+      throw new Error("Sheet aktif atau 'DaftarISBN' tidak ditemukan.");
+    }
 
-  const headerRow = 9;   // Baris header
-  const startRow = 10;   // Baris pertama data
-  const lastRow = sheetData.getLastRow();
-  const numRows = lastRow - startRow + 1;
+    const headerRow = 9;   // Baris header
+    const startRow = 10;   // Baris pertama data
+    const lastRow = sheetData.getLastRow();
+    const numRows = lastRow - startRow + 1;
 
-  // 🛡️ Cegah error jika tidak ada data
-  if (numRows < 1) {
-    Logger.log("⚠️ Tidak ada data untuk diproses.");
-    return;
-  }
+    // 🛡️ Cegah error jika tidak ada data
+    if (numRows < 1) {
+      Logger.log("⚠️ Tidak ada data untuk diproses.");
+      return;
+    }
 
-  // Ambil header & data
-  const headers = sheetData.getRange(headerRow, 1, 1, sheetData.getLastColumn())
-    .getValues()[0]
-    .map(h => String(h).toLowerCase().trim());
+    // Ambil header & data
+    const headers = sheetData.getRange(headerRow, 1, 1, sheetData.getLastColumn())
+      .getValues()[0]
+      .map(h => String(h).toLowerCase().trim());
 
-  const dataRange = sheetData.getRange(startRow, 1, numRows, sheetData.getLastColumn());
-  const data = dataRange.getValues();
+    const dataRange = sheetData.getRange(startRow, 1, numRows, sheetData.getLastColumn());
+    const data = dataRange.getValues();
 
-  // Cari indeks kolom ISBN
-  const isbnCetakIndex = headers.findIndex(h => h.includes("isbn cetak"));
-  const isbnElektronikIndex = headers.findIndex(h => h.includes("isbn elektronik"));
+    // Cari indeks kolom ISBN
+    const isbnCetakIndex = headers.findIndex(h => h.includes("isbn cetak"));
+    const isbnElektronikIndex = headers.findIndex(h => h.includes("isbn elektronik"));
 
-  if (isbnCetakIndex === -1 && isbnElektronikIndex === -1) {
-    throw new Error("Kolom ISBN tidak ditemukan di baris " + headerRow);
-  }
+    if (isbnCetakIndex === -1 && isbnElektronikIndex === -1) {
+      throw new Error("Kolom ISBN tidak ditemukan di baris " + headerRow);
+    }
 
-  // Ambil ISBN dari sheet referensi
-  const rawISBNData = sheetISBN.getRange("A:B").getValues();
-  const isbnSet = new Set();
-  rawISBNData.forEach(([isbnCetak, isbnElektronik]) => {
-    const clean1 = String(isbnCetak).replace(/\D/g, "");
-    const clean2 = String(isbnElektronik).replace(/\D/g, "");
-    if (clean1) isbnSet.add(clean1);
-    if (clean2) isbnSet.add(clean2);
-  });
+    // Ambil ISBN dari sheet referensi
+    const rawISBNData = sheetISBN.getRange("A:B").getValues();
+    const isbnSet = new Set();
+    rawISBNData.forEach(([isbnCetak, isbnElektronik]) => {
+      const clean1 = String(isbnCetak).replace(/\D/g, "");
+      const clean2 = String(isbnElektronik).replace(/\D/g, "");
+      if (clean1) isbnSet.add(clean1);
+      if (clean2) isbnSet.add(clean2);
+    });
 
-  const frozenRows = sheetData.getFrozenRows();
+    const frozenRows = sheetData.getFrozenRows();
 
-  // Hapus dari bawah ke atas
-  for (let i = data.length - 1; i >= 0; i--) {
-    const valCetak = isbnCetakIndex !== -1 ? String(data[i][isbnCetakIndex]).replace(/\D/g, "") : "";
-    const valElektronik = isbnElektronikIndex !== -1 ? String(data[i][isbnElektronikIndex]).replace(/\D/g, "") : "";
+    // Hapus dari bawah ke atas
+    for (let i = data.length - 1; i >= 0; i--) {
+      const valCetak = isbnCetakIndex !== -1 ? String(data[i][isbnCetakIndex]).replace(/\D/g, "") : "";
+      const valElektronik = isbnElektronikIndex !== -1 ? String(data[i][isbnElektronikIndex]).replace(/\D/g, "") : "";
 
-    if (isbnSet.has(valCetak) || isbnSet.has(valElektronik)) {
-      const rowNumber = startRow + i;
-      const remainingNonFrozen = sheetData.getLastRow() - frozenRows;
+      if (isbnSet.has(valCetak) || isbnSet.has(valElektronik)) {
+        const rowNumber = startRow + i;
+        const remainingNonFrozen = sheetData.getLastRow() - frozenRows;
 
-      if (remainingNonFrozen > 1) {
-        sheetData.deleteRow(rowNumber);
-      } else {
-        sheetData.getRange(rowNumber, 1, 1, sheetData.getLastColumn()).clearContent();
+        if (remainingNonFrozen > 1) {
+          sheetData.deleteRow(rowNumber);
+        } else {
+          sheetData.getRange(rowNumber, 1, 1, sheetData.getLastColumn()).clearContent();
+        }
       }
     }
-  }
 
-  const remainingRows = sheetData.getLastRow();
+    const remainingRows = sheetData.getLastRow();
 
-  // 🧹 Hapus sheet jika kosong
-  if (remainingRows < 10) {
-    const namaPenerbit = sheetData.getName().replace(/^\d+\.\s*/, "").trim();
-    ss.deleteSheet(sheetData);
-    ModulHapusBarisDariHasilSeleksi(namaPenerbit);
-    return;
-  }
-
-  Logger.log('✅ Selesai Menjalankan FungsiHapusSudahdibeliISBNdanEISBN pada sheet: ' + nama);
-  FungsiTampilanSheetPenerbit();
-}
-
-function ModulHapusBarisDariHasilSeleksi(namaPenerbit) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hasil Seleksi");
-  const data = sheet.getDataRange().getValues();
-
-  const barisUntukHapus = [];
-
-  for (let i = 0; i < data.length; i++) {
-    const nama = String(data[i][1] || "").replace(/^\d+\.\s*/, "").trim();
-    if (nama.toLowerCase() === namaPenerbit.toLowerCase()) {
-      barisUntukHapus.push(i + 1);
+    // 🧹 Hapus sheet jika kosong
+    if (remainingRows < 10) {
+      const namaPenerbit = sheetData.getName().replace(/^\d+\.\s*/, "").trim();
+      ss.deleteSheet(sheetData);
+      ModulHapusBarisDariHasilSeleksi(namaPenerbit);
+      return;
     }
+
+    Logger.log('✅ Selesai Menjalankan FungsiHapusSudahdibeliISBNdanEISBN pada sheet: ' + nama);
+    FungsiTampilanSheetPenerbit();
   }
 
-  barisUntukHapus.reverse().forEach(row => sheet.deleteRow(row));
-}
+  function ModulHapusBarisDariHasilSeleksi(namaPenerbit) {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Hasil Seleksi");
+    const data = sheet.getDataRange().getValues();
+
+    const barisUntukHapus = [];
+
+    for (let i = 0; i < data.length; i++) {
+      const nama = String(data[i][1] || "").replace(/^\d+\.\s*/, "").trim();
+      if (nama.toLowerCase() === namaPenerbit.toLowerCase()) {
+        barisUntukHapus.push(i + 1);
+      }
+    }
+
+    barisUntukHapus.reverse().forEach(row => sheet.deleteRow(row));
+  }
 
 
 //     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN     ========
 
-
 //     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN Semua Sheet     ========
- function FungsiHapusSudahdibeliISBNdanEISBNALLSHEET() {
-  const spreadsheet = SpreadsheetApp.getActive();
-  const semuaSheet = spreadsheet.getSheets();
+  function FungsiHapusSudahdibeliISBNdanEISBNALLSHEET() {
+    const spreadsheet = SpreadsheetApp.getActive();
+    const semuaSheet = spreadsheet.getSheets();
 
-  //PERLU DIRUBAH ==============================================================================
-  const sheetmulai = 0; // Masukan Nomor Sheet awal
-  //PERLU DIRUBAH ==============================================================================
+    //PERLU DIRUBAH ==============================================================================
+    const sheetmulai = 0; // Masukan Nomor Sheet awal
+    //PERLU DIRUBAH ==============================================================================
 
-  const mulai = sheetmulai + 2;
-  const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
+    const mulai = sheetmulai + 2;
+    const sheetDikecualikan = ['Form Pengadaan', 'Hasil Seleksi', 'Referensi', 'DaftarISBN', 'DaftarUUID'];
 
-  if (mulai < 0 || mulai >= semuaSheet.length) {
-    Logger.log("Nomor sheet tidak valid.");
-    return;
-  }
-  semuaSheet.slice(mulai).forEach(sheet => {
-    const namaSheet = sheet.getName();
-    if (sheetDikecualikan.includes(namaSheet)) return;
-    spreadsheet.setActiveSheet(sheet);
-    FungsiHapusSudahdibeliISBNdanEISBN();
-  });
- };
+    if (mulai < 0 || mulai >= semuaSheet.length) {
+      Logger.log("Nomor sheet tidak valid.");
+      return;
+    }
+    semuaSheet.slice(mulai).forEach(sheet => {
+      const namaSheet = sheet.getName();
+      if (sheetDikecualikan.includes(namaSheet)) return;
+      spreadsheet.setActiveSheet(sheet);
+      FungsiHapusSudahdibeliISBNdanEISBN();
+    });
+  };
 //     ========     Fungsi Hapus pembelian Sebelumnya berdasarkan ISBN dan EISBN Semua Sheet     ========
