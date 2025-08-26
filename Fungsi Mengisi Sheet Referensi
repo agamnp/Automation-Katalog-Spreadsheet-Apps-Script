@@ -1,0 +1,143 @@
+//     ========     Fungsi Mengisi Sheet Referensi     ========
+  function FungsiIsiSheetReferensi() {
+    // ✅ Cek Sheet Aktif
+      const ss = SpreadsheetApp.getActiveSpreadsheet();
+      const sheetAktif = ss.getActiveSheet();
+      if (sheetAktif.getName().toUpperCase() !== 'REFERENSI') {
+        Logger.log('Fungsi ini hanya bisa dijalankan di sheet "REFERENSI".');
+        return;
+      }
+    // 
+    Logger.log('Menjalankan Fungsi Isi Sheet Referensi');
+    const sheetHasilSeleksi = ss.getSheetByName("Hasil Seleksi");
+    const sheetRef = ss.getSheetByName("REFERENSI");
+    const semuaSheet = ss.getSheets();
+    const startCol = 5; // kolom E
+    const lastCol = sheetRef.getLastColumn();
+    const rowHyperlink = 4; // baris hyperlink
+    let lastHyperlinkCol = startCol;
+    for (let c = startCol; c <= lastCol; c++) {
+    const formula = sheetRef.getRange(rowHyperlink, c).getFormula();
+    if (formula && formula.includes("HYPERLINK")) {
+    lastHyperlinkCol = c;}} // update posisi terakhir
+    const rowAwalKode = 11; // baris awal kode referensi
+    
+    // Range pertama: E5 sampai kolom terakhir di baris 119
+    const range1 = sheetRef.getRange(4, 5, 119, lastCol - 4); 
+    range1.clearContent();
+
+    // Range kedua: C11:C119
+    const range2 = sheetRef.getRange("C11:C119");
+    range2.clearContent();
+
+  
+    // ✅ 1. Modul Hyperlink Penerbit
+      Logger.log('Mengisi Data Penerbit');
+      const lastRowHS = sheetHasilSeleksi.getLastRow();
+      const dataNo = sheetHasilSeleksi.getRange(1, 1, lastRowHS).getValues(); // kol A
+      const dataPenerbit = sheetHasilSeleksi.getRange(1, 2, lastRowHS).getValues(); // kol B
+      let col = startCol;
+
+      for (let i = 0; i < lastRowHS; i++) {
+        const nomor = dataNo[i][0];
+        const penerbit = dataPenerbit[i][0];
+        if (typeof nomor === "number" && !isNaN(nomor) && penerbit) {
+          const sheetCocok = semuaSheet.find(s =>
+            s.getName().toLowerCase().includes(penerbit.toString().toLowerCase())
+          );
+          if (sheetCocok) {
+            const gid = sheetCocok.getSheetId();
+            const label = `${nomor}`;
+            const formula = `=HYPERLINK("#gid=${gid}"; "${label}")`;
+            sheetRef.getRange(rowHyperlink, col).setFormula(formula);
+            col++;
+          }
+        }    }
+    //  
+
+    // ✅ 2. Modul Isi Data Referensi
+      Logger.log('Mengisi Data Referensi');
+        const barisTarget = [];
+        const dataKode = sheetRef.getRange(rowAwalKode, 1, sheetRef.getLastRow() - rowAwalKode + 1, 1).getValues();
+
+        for (let i = 0; i < dataKode.length; i++) {
+          const isi = dataKode[i][0];
+          if (isi && typeof isi === "string" && !isi.toLowerCase().includes("total")) {
+            barisTarget.push(rowAwalKode + i);   }    
+          }
+        function colLetter(colIndex) {
+          let letter = '';
+          while (colIndex > 0) {
+            let mod = (colIndex - 1) % 26;
+            letter = String.fromCharCode(65 + mod) + letter;
+            colIndex = Math.floor((colIndex - mod) / 26);
+          }
+          return letter;
+        }
+        const sumFormulas = {
+          5: '=SUM({col}14;{col}25;{col}37;{col}49;{col}55;{col}60;{col}67;{col}78;{col}110;{col}119)',
+          14: '=SUM({col}11:{col}13)',
+          25: '=SUM({col}19:{col}24)',
+          37: '=SUM({col}29:{col}36)',
+          49: '=SUM({col}41:{col}48)',
+          55: '=SUM({col}53:{col}54)',
+          60: '=SUM({col}58:{col}59)',
+          67: '=SUM({col}64:{col}66)',
+          78: '=SUM({col}70:{col}77)',
+          110: '=SUM({col}81:{col}109)',
+          119: '=SUM({col}113:{col}118)'
+        };
+        
+        for (let col = startCol; col <= lastHyperlinkCol; col++) {
+          const formulaHyperlink = sheetRef.getRange(rowHyperlink, col).getFormula();
+          const gidMatch = formulaHyperlink.match(/gid=(\d+)/);
+          if (!gidMatch){
+            Logger.log(`⏭ Kolom ${col} dilewati (tidak ada hyperlink)`); 
+            continue;
+          }
+          const gid = parseInt(gidMatch[1], 10);
+          const sheetTarget = semuaSheet.find(s => s.getSheetId() === gid);
+          if (!sheetTarget){
+            Logger.log(`❌ Kolom ${col} - Sheet target dengan gid ${gid} tidak ditemukan`);
+            continue;
+          }
+          const namaSheet = sheetTarget.getName();
+          const namaRange = namaSheet.replace(/[^A-Za-z]/g, "");
+          const colLet = colLetter(col);
+          Logger.log(`✅ Proses kolom ${colLet} (${col}) → Sheet: ${namaSheet}`);
+
+          // ✅ Baris 6: Baris yang belum teridentifikasi
+          sheetRef.getRange(6, col).setFormula(`=COUNTIF(${namaRange};"")`);
+
+          // ✅ Baris yang sudah teridentifikasi
+          barisTarget.forEach(row => {
+            sheetRef.getRange(row, col).setFormula(`=COUNTIF(${namaRange};$A${row})`);
+          });
+
+          // ✅ Baris SUM
+          for (let rowStr in sumFormulas) {
+            const rowNum = parseInt(rowStr, 10);
+            const formula = sumFormulas[rowNum].replace(/{col}/g, colLet);
+            sheetRef.getRange(rowNum, col).setFormula(formula);
+          }
+        }
+    //
+    
+    // ✅ 3. Isi kolom C 
+      const lastColLetter = colLetter(lastCol);
+      barisTarget.forEach(row => {
+      sheetRef.getRange(row, 3).setFormula(`=SUM(E${row}:${lastColLetter}${row})`);
+      });
+    //  
+
+    // ✅  4. Isi total di kolom C (C14, C25, dst) sesuai sumFormulas
+      for (let rowStr in sumFormulas) {
+        const rowNum = parseInt(rowStr, 10);
+        const formula = sumFormulas[rowNum].replace(/{col}/g, 'C');
+        sheetRef.getRange(rowNum, 3).setFormula(formula);
+      }
+    //  
+
+    Logger.log('Selesai Menjalankan Fungsi Isi Sheet Referensi');
+ } 
+//     ========     Fungsi Mengisi Sheet Referensi     ========
